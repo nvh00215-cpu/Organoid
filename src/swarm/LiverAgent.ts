@@ -1,5 +1,5 @@
-import { OrganReplySchema, SystemStateSchema } from './types'
-import type { OrganReply, SystemState } from './types'
+import { OrganReplySchema, SystemStateSchema } from './types.ts'
+import type { OrganReply, SystemState } from './types.ts'
 
 /**
  * Organ agent interface. The mock below is synchronous; a real LLM-backed
