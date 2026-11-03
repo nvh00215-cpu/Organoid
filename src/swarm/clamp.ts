@@ -1,4 +1,4 @@
-import type { WhitelistedParam } from './types'
+import type { WhitelistedParam } from './types.ts'
 
 export interface ParamLimits {
   readonly min: number
