@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { LIMITS } from './clamp'
 import { buildLiverPrompt } from './LiverAgent'
+import { buildHeartPrompt, buildKidneyPrompt } from './organPrompts'
 import { WHITELISTED_PARAMS } from './types'
 import type { SystemState } from './types'
 
@@ -57,6 +58,39 @@ describe('buildLiverPrompt', () => {
 
   it('rejects invalid states', () => {
     expect(() => buildLiverPrompt({ ...testState(), gshPct: 101 })).toThrow()
+  })
+
+  it('builds kidney prompts with persona, rubric and readings', () => {
+    const prompt = buildKidneyPrompt({
+      tick: 10,
+      tHours: 5,
+      medullaMean: 4,
+      damageMean: 0.1,
+      injuryFrac: 0.08,
+      cortexMean: 2,
+    })
+    expect(prompt).toContain('You are the Kidney in a simulated patient')
+    expect(prompt).toContain('first person')
+    expect(prompt).toContain('CRITICAL if medulla is over 7.2')
+    expect(prompt).toContain('HIGH if medulla is over 3.6')
+    expect(prompt).toContain('MODERATE if medulla is over 2')
+    expect(prompt).toContain('always omit "action"')
+    expect(prompt).toContain('tick=10')
+    expect(prompt).toContain('medullaMean=4.00')
+    expect(prompt).toContain('Reply with JSON only')
+  })
+
+  it('builds heart prompts with persona, rubric and readings', () => {
+    const prompt = buildHeartPrompt({ tick: 10, tHours: 5, herg: 0.5, damage: 0.1 })
+    expect(prompt).toContain('You are the Heart in a simulated patient')
+    expect(prompt).toContain('first person')
+    expect(prompt).toContain('CRITICAL if damage is over 0.4')
+    expect(prompt).toContain('HIGH if damage is over 0.2')
+    expect(prompt).toContain('MODERATE if damage is over 0.08')
+    expect(prompt).toContain('always omit "action"')
+    expect(prompt).toContain('tick=10')
+    expect(prompt).toContain('herg=0.500')
+    expect(prompt).toContain('Reply with JSON only')
   })
 
   it('matches the blessed liver prompt byte for byte', () => {
