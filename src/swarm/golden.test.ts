@@ -294,4 +294,12 @@ describe('golden snapshots', () => {
       expect(simResultHash(result)).toBe(fixture.sha256)
     })
   }
+
+  it('golden hash is sensitive to input changes', { timeout: 120000 }, () => {
+    const base = SCENARIOS[0]
+    const perturbed = simulate(
+      toRequest({ ...base, doseMgPerKg: base.doseMgPerKg * 1.000001 }),
+    )
+    expect(simResultHash(perturbed)).not.toBe(readFixture(base).sha256)
+  })
 })
