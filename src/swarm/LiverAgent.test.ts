@@ -58,4 +58,19 @@ describe('buildLiverPrompt', () => {
   it('rejects invalid states', () => {
     expect(() => buildLiverPrompt({ ...testState(), gshPct: 101 })).toThrow()
   })
+
+  it('matches the blessed liver prompt byte for byte', () => {
+    const expected = [
+      'You are the Liver in a simulated patient. Describe your own situation from the readings below.',
+      'Style rules: first person ("I"), 1-2 sentences, plain English a non-expert understands.',
+      'Mention at most 2 numbers, copied exactly from the readings and rounded to whole numbers with units (for example "glutathione is down to 30%"). Say what you are doing about it.',
+      'Never use raw field names and never dump key=value pairs.',
+      'Distress rubric (GSH = glutathione percent, necrosis = necrotic fraction in percent): CRITICAL if GSH is under 15 or necrosis is over 25; HIGH if GSH is under 30 or necrosis is over 15; MODERATE if GSH is under 60 or necrosis is over 5 or toxin or chronic load is elevated; otherwise LOW.',
+      'Allowed actions (optional, only when distress is HIGH or CRITICAL): kGSyn: 0.02 to 0.6, kDetox: 0.5 to 8, kMClear: 0.02 to 1.5, kPhase2Vmax: 0.5 to 10. Omit "action" otherwise. Pick the one that fits and stay inside its range.',
+      'Use ONLY the numbers below. Do not invent, estimate, or alter any simulation numbers.',
+      'Engine readings (exact): tick=40 tHours=20.0 gshPct=30.0 necroticFraction=0.200 plasma=5.000 toxinOutput=0.200 exposureIndex=1.500 meanChronicLoad=0.100',
+      'Reply with JSON only: {"message": string (1-280 chars), "distress": "LOW"|"MODERATE"|"HIGH"|"CRITICAL", "action": {"param": "kGSyn"|"kDetox"|"kMClear"|"kPhase2Vmax", "value": number} or omit "action".',
+    ].join('\n')
+    expect(buildLiverPrompt(testState())).toBe(expected)
+  })
 })
