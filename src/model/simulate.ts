@@ -77,6 +77,7 @@ export function simulate(request: SimRequest): SimResult {
   let brainPeakDamage = 0
   let lastKidneyMean = 0
   let lastKidneyMedulla = 0
+  let exposureIndex = 0
 
   let peakZone3Metabolite = 0
   let timeAbove = 0
@@ -102,6 +103,8 @@ export function simulate(request: SimRequest): SimResult {
     let d3 = 0
     let meanD = 0
     let meanC = 0
+    let gSum = 0
+    let g3 = 0
     for (let i = 0; i < GRID_COUNT; i++) {
       const z = lobules[i]
       const d = damages[i]
@@ -121,6 +124,8 @@ export function simulate(request: SimRequest): SimResult {
       d3 += z[2].d
       meanD += d
       meanC += chronic[i]
+      gSum += z[0].g + z[1].g + z[2].g
+      g3 += z[2].g
     }
     const n = GRID_COUNT
     const foldNow = exposureFold(plasma, typical)
@@ -148,6 +153,9 @@ export function simulate(request: SimRequest): SimResult {
       zone3D: d3 / n,
       meanDamage: meanD / n,
       meanChronic: meanC / n,
+      meanGsh: gSum / (n * 3),
+      zone3Gsh: g3 / n,
+      exposureIndex,
       exposureFold: foldNow,
       kidneyMedulla: lastKidneyMedulla,
       kidneyDamage: lastKidneyMean,
@@ -189,6 +197,7 @@ export function simulate(request: SimRequest): SimResult {
     }
     meanM3 /= GRID_COUNT
     meanL /= GRID_COUNT
+    exposureIndex += meanM3 * DT
     const fracN = necrotic / GRID_COUNT
     if (meanM3 > peakZone3Metabolite) peakZone3Metabolite = meanM3
     if (meanM3 > compound.metaboliteThreshold) timeAbove += DT
@@ -260,12 +269,14 @@ export function simulate(request: SimRequest): SimResult {
   let meanFinal = 0
   let meanL = 0
   let kidneyInjured = 0
+  let gFinal = 0
   const meanZ: [number, number, number] = [0, 0, 0]
   for (let i = 0; i < GRID_COUNT; i++) {
     const d = last.damage[i]
     const kd = last.kidneyDamage[i]
     meanFinal += d
     meanL += last.chronicLoad[i]
+    gFinal += lobules[i][0].g + lobules[i][1].g + lobules[i][2].g
     if (d > NECROTIC) necrotic++
     if (kd > NECROTIC) kidneyInjured++
     if (d > hottestD) {
@@ -285,6 +296,7 @@ export function simulate(request: SimRequest): SimResult {
   meanZ[0] /= GRID_COUNT
   meanZ[1] /= GRID_COUNT
   meanZ[2] /= GRID_COUNT
+  const meanFinalGsh = gFinal / (GRID_COUNT * 3)
 
   return {
     request,
@@ -321,5 +333,7 @@ export function simulate(request: SimRequest): SimResult {
     brainFinalDamage: brainDamage,
     brainClearance,
     metaboliteOutput,
+    meanFinalGsh,
+    exposureIndex,
   }
 }

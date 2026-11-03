@@ -45,7 +45,7 @@ export interface CompoundParams {
   kidneyScale: number
   /** hERG blockade gain. 1 = reference cardiac sensitivity. */
   heartScale: number
-  /** Blood–brain barrier permeability gain. */
+  /** BloodÃ¢â‚¬â€œbrain barrier permeability gain. */
   brainScale: number
   blurb: string
 }
@@ -90,6 +90,12 @@ export interface ChartPoint {
   heartDamage: number
   brainConc: number
   brainDamage: number
+  /** Grand-mean GSH across all zones and lobules (0..1). Recorded for agent summaries. */
+  meanGsh: number
+  /** Mean Zone-3 GSH across lobules (0..1). */
+  zone3Gsh: number
+  /** Cumulative time-integral of mean Zone-3 metabolite up to t (concÂ·h). */
+  exposureIndex: number
 }
 
 export interface SimFrame {
@@ -144,6 +150,10 @@ export interface SimResult {
   brainFinalDamage: number
   brainClearance: number
   metaboliteOutput: number
+  /** Grand-mean GSH at end of run (0..1). */
+  meanFinalGsh: number
+  /** Time-integral of mean Zone-3 metabolite over the run (conc·h). */
+  exposureIndex: number
 }
 
 export const GRID_COLS = 32
