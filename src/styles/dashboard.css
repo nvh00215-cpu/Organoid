@@ -444,20 +444,51 @@
   accent-color: var(--blue);
 }
 
-.kidney {
-  opacity: 0.55;
-  position: relative;
+.organ-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
-.kidney .soon {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: var(--card-alt);
-  padding: 4px 8px;
-  border-radius: 999px;
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+
+.check-row input {
+  margin-top: 2px;
+}
+
+.systemic-line {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.organ-panel {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 420px;
+}
+
+.gauge-block {
+  text-align: center;
+}
+
+.gauge-read {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
 .footer-note {
@@ -488,5 +519,9 @@
 
   .focal {
     order: -1;
+  }
+
+  .organ-panel {
+    grid-template-columns: 1fr;
   }
 }

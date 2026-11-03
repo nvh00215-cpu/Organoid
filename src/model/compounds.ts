@@ -22,6 +22,9 @@ export const COMPOUNDS: Record<Exclude<CompoundId, 'custom'>, CompoundParams> = 
     kPhase2Vmax: 3.2,
     kmPhase2: 14,
     metaboliteThreshold: 0.12,
+    kidneyScale: 1.1,
+    heartScale: 0.9,
+    brainScale: 0.55,
     blurb:
       'APAP-class: Phase II saturates at overdose, CYP bioactivation and GSH loss peak in Zone 3 (pericentral).',
   },
@@ -46,6 +49,9 @@ export const COMPOUNDS: Record<Exclude<CompoundId, 'custom'>, CompoundParams> = 
     kPhase2Vmax: 5.5,
     kmPhase2: 20,
     metaboliteThreshold: 0.45,
+    kidneyScale: 1.55,
+    heartScale: 0.3,
+    brainScale: 0.22,
     blurb:
       'NSAID-class proxy: lower reactive-metabolite burden. High dose may stress tissue without a classic centrilobular wave.',
   },
@@ -82,6 +88,9 @@ export function customToCompound(overrides: CustomOverrides): CompoundParams {
     kPhase2Vmax: 3.4,
     kmPhase2: 14,
     metaboliteThreshold: overrides.metaboliteThreshold,
+    kidneyScale: 0.75 + 0.35 * cyp,
+    heartScale: 0.7,
+    brainScale: 0.4,
     blurb:
       'User-specified CYP strength and metabolite threshold on the same 3-zone lobule scaffold.',
   }

@@ -19,7 +19,7 @@ export function Header({ onExport, canExport }: HeaderProps) {
         </div>
         <div>
           <h1>Digital Liver</h1>
-          <p>Lobule-scale tissue model · Preclinical dose triage</p>
+          <p>Liver, kidney, heart, and brain on one plasma</p>
         </div>
       </div>
       <div className="header-actions">

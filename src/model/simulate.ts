@@ -18,7 +18,11 @@ import {
   stepLobule,
 } from './lobuleOde'
 import type { ZoneState } from './lobuleOde'
-import { bolusDelta, initialPlasma, injectIfDue, stepPlasma } from './plasma'
+import { stepBrain } from './brain'
+import { hergBlock, stepHeart } from './heart'
+import { stepKidney } from './kidney'
+import { bolusDelta, initialPlasma, injectIfDue } from './plasma'
+import { exposureFold, stepCoupledPlasma, typicalPlasma } from './systemicPlasma'
 
 let neighborCache: number[][] | null = null
 
@@ -36,6 +40,7 @@ export function frameStrideHours(horizonHours: number): number {
 
 export function simulate(request: SimRequest): SimResult {
   const { compound, doseMgPerKg, horizonHours, dosingPattern, seed } = request
+  const coupleOrgans = request.coupleOrgans === true
   const perfusion = buildPerfusion(seed)
   const nbrs = neighbors()
   const lobules: [ZoneState, ZoneState, ZoneState][] = Array.from(
@@ -44,13 +49,34 @@ export function simulate(request: SimRequest): SimResult {
   )
   const chronic = new Float32Array(GRID_COUNT)
   const emaM = new Float32Array(GRID_COUNT)
+  const kidneyCortex = new Float32Array(GRID_COUNT)
+  const kidneyMedulla = new Float32Array(GRID_COUNT)
+  const kidneyDamage = new Float32Array(GRID_COUNT)
   const bolus = bolusDelta(doseMgPerKg, compound)
+  const typical = typicalPlasma(compound)
 
   let plasma = initialPlasma(doseMgPerKg, compound)
   const damages = new Float32Array(GRID_COUNT)
   const frames: SimFrame[] = []
   const series: ChartPoint[] = []
   const stress = new Float32Array(GRID_COUNT)
+  const kidneyStress = new Float32Array(GRID_COUNT)
+  let heartDamage = 0
+  let heartHerg = hergBlock(exposureFold(plasma, typical), compound.heartScale)
+  let brainConc = 0
+  let brainDamage = 0
+  let kidneyClearance = 0
+  let heartClearance = 0
+  let brainClearance = 0
+  let metaboliteOutput = 0
+  let kidneyPeakMedulla = 0
+  let kidneyPeakMeanDamage = 0
+  let heartPeakHerg = heartHerg
+  let heartPeakDamage = 0
+  let brainPeakConc = 0
+  let brainPeakDamage = 0
+  let lastKidneyMean = 0
+  let lastKidneyMedulla = 0
 
   let peakZone3Metabolite = 0
   let timeAbove = 0
@@ -65,6 +91,9 @@ export function simulate(request: SimRequest): SimResult {
     const damage = new Float32Array(GRID_COUNT)
     const zoneDamage = new Float32Array(GRID_COUNT * 3)
     const chronicLoad = new Float32Array(GRID_COUNT)
+    const kCortex = new Float32Array(GRID_COUNT)
+    const kMedulla = new Float32Array(GRID_COUNT)
+    const kDamage = new Float32Array(GRID_COUNT)
     let c1 = 0
     let c3 = 0
     let m1 = 0
@@ -78,6 +107,9 @@ export function simulate(request: SimRequest): SimResult {
       const d = damages[i]
       damage[i] = d
       chronicLoad[i] = chronic[i]
+      kCortex[i] = kidneyCortex[i]
+      kMedulla[i] = kidneyMedulla[i]
+      kDamage[i] = kidneyDamage[i]
       zoneDamage[i * 3] = z[0].d
       zoneDamage[i * 3 + 1] = z[1].d
       zoneDamage[i * 3 + 2] = z[2].d
@@ -91,7 +123,20 @@ export function simulate(request: SimRequest): SimResult {
       meanC += chronic[i]
     }
     const n = GRID_COUNT
-    frames.push({ t, damage, zoneDamage, chronicLoad })
+    const foldNow = exposureFold(plasma, typical)
+    frames.push({
+      t,
+      damage,
+      zoneDamage,
+      chronicLoad,
+      kidneyCortex: kCortex,
+      kidneyMedulla: kMedulla,
+      kidneyDamage: kDamage,
+      heartHerg,
+      heartDamage,
+      brainConc,
+      brainDamage,
+    })
     series.push({
       t,
       plasma,
@@ -103,6 +148,13 @@ export function simulate(request: SimRequest): SimResult {
       zone3D: d3 / n,
       meanDamage: meanD / n,
       meanChronic: meanC / n,
+      exposureFold: foldNow,
+      kidneyMedulla: lastKidneyMedulla,
+      kidneyDamage: lastKidneyMean,
+      heartHerg,
+      heartDamage,
+      brainConc,
+      brainDamage,
     })
   }
 
@@ -141,6 +193,37 @@ export function simulate(request: SimRequest): SimResult {
     if (meanM3 > peakZone3Metabolite) peakZone3Metabolite = meanM3
     if (meanM3 > compound.metaboliteThreshold) timeAbove += DT
 
+    const fold = exposureFold(plasma, typical)
+    const kidney = stepKidney(
+      kidneyCortex,
+      kidneyMedulla,
+      kidneyDamage,
+      perfusion,
+      nbrs,
+      kidneyStress,
+      fold,
+      compound.kidneyScale,
+      DT,
+    )
+    const heart = stepHeart(heartDamage, fold, compound.heartScale, DT)
+    const brain = stepBrain(brainConc, brainDamage, fold, compound.brainScale, DT)
+    heartDamage = heart.damage
+    heartHerg = heart.herg
+    brainConc = brain.conc
+    brainDamage = brain.damage
+    kidneyClearance = kidney.clearanceRate
+    heartClearance = heart.clearanceRate
+    brainClearance = brain.clearanceRate
+    metaboliteOutput = meanM3 + kidney.metaboliteOutput
+    lastKidneyMean = kidney.meanDamage
+    lastKidneyMedulla = kidney.meanMedulla
+    if (kidney.meanMedulla > kidneyPeakMedulla) kidneyPeakMedulla = kidney.meanMedulla
+    if (kidney.meanDamage > kidneyPeakMeanDamage) kidneyPeakMeanDamage = kidney.meanDamage
+    if (heart.herg > heartPeakHerg) heartPeakHerg = heart.herg
+    if (heart.damage > heartPeakDamage) heartPeakDamage = heart.damage
+    if (brain.conc > brainPeakConc) brainPeakConc = brain.conc
+    if (brain.damage > brainPeakDamage) brainPeakDamage = brain.damage
+
     if (meanL > CHRONIC_FAIL_LOAD) {
       consecutiveChronicHigh += DT
       timeChronicHigh += DT
@@ -155,7 +238,10 @@ export function simulate(request: SimRequest): SimResult {
       failureType = acuteHit && chronicHit ? 'both' : acuteHit ? 'acute' : 'chronic'
     }
 
-    plasma = stepPlasma(plasma, compound, DT)
+    const extraClearance = coupleOrgans
+      ? kidney.clearanceRate + heart.clearanceRate + brain.clearanceRate
+      : 0
+    plasma = stepCoupledPlasma(plasma, compound, DT, extraClearance)
 
     if (t - lastSample >= stride - 1e-9 || s === steps || failedAt !== null) {
       snapshot(t)
@@ -169,17 +255,26 @@ export function simulate(request: SimRequest): SimResult {
   let necrotic = 0
   let hottest = 0
   let hottestD = -1
+  let kidneyHottest = 0
+  let kidneyHottestD = -1
   let meanFinal = 0
   let meanL = 0
+  let kidneyInjured = 0
   const meanZ: [number, number, number] = [0, 0, 0]
   for (let i = 0; i < GRID_COUNT; i++) {
     const d = last.damage[i]
+    const kd = last.kidneyDamage[i]
     meanFinal += d
     meanL += last.chronicLoad[i]
     if (d > NECROTIC) necrotic++
+    if (kd > NECROTIC) kidneyInjured++
     if (d > hottestD) {
       hottestD = d
       hottest = i
+    }
+    if (kd > kidneyHottestD) {
+      kidneyHottestD = kd
+      kidneyHottest = i
     }
     meanZ[0] += last.zoneDamage[i * 3]
     meanZ[1] += last.zoneDamage[i * 3 + 1]
@@ -210,5 +305,21 @@ export function simulate(request: SimRequest): SimResult {
     failedAt,
     failureType,
     dt: DT,
+    coupleOrgans,
+    kidneyMeanDamage: lastKidneyMean,
+    kidneyPeakMeanDamage,
+    kidneyFracInjured: kidneyInjured / GRID_COUNT,
+    kidneyPeakMedulla,
+    kidneyHottestIndex: kidneyHottest,
+    kidneyClearance,
+    heartPeakHerg,
+    heartPeakDamage,
+    heartFinalDamage: heartDamage,
+    heartClearance,
+    brainPeakConc,
+    brainPeakDamage,
+    brainFinalDamage: brainDamage,
+    brainClearance,
+    metaboliteOutput,
   }
 }

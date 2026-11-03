@@ -41,6 +41,12 @@ export interface CompoundParams {
   kPhase2Vmax: number
   kmPhase2: number
   metaboliteThreshold: number
+  /** Medullary concentration gain. 1 = reference nephron. */
+  kidneyScale: number
+  /** hERG blockade gain. 1 = reference cardiac sensitivity. */
+  heartScale: number
+  /** Blood–brain barrier permeability gain. */
+  brainScale: number
   blurb: string
 }
 
@@ -59,6 +65,11 @@ export interface SimRequest {
   horizonHours: number
   dosingPattern: DosingPattern
   seed: number
+  /**
+   * When true, kidney and heart clearance are subtracted from plasma.
+   * Default false keeps the original liver-only plasma trajectory.
+   */
+  coupleOrgans?: boolean
 }
 
 export interface ChartPoint {
@@ -72,6 +83,13 @@ export interface ChartPoint {
   zone3D: number
   meanDamage: number
   meanChronic: number
+  exposureFold: number
+  kidneyMedulla: number
+  kidneyDamage: number
+  heartHerg: number
+  heartDamage: number
+  brainConc: number
+  brainDamage: number
 }
 
 export interface SimFrame {
@@ -82,6 +100,13 @@ export interface SimFrame {
   zoneDamage: Float32Array
   /** Diffuse chronic load per lobule. */
   chronicLoad: Float32Array
+  kidneyCortex: Float32Array
+  kidneyMedulla: Float32Array
+  kidneyDamage: Float32Array
+  heartHerg: number
+  heartDamage: number
+  brainConc: number
+  brainDamage: number
 }
 
 export interface SimResult {
@@ -103,6 +128,22 @@ export interface SimResult {
   failedAt: number | null
   failureType: FailureType
   dt: number
+  coupleOrgans: boolean
+  kidneyMeanDamage: number
+  kidneyPeakMeanDamage: number
+  kidneyFracInjured: number
+  kidneyPeakMedulla: number
+  kidneyHottestIndex: number
+  kidneyClearance: number
+  heartPeakHerg: number
+  heartPeakDamage: number
+  heartFinalDamage: number
+  heartClearance: number
+  brainPeakConc: number
+  brainPeakDamage: number
+  brainFinalDamage: number
+  brainClearance: number
+  metaboliteOutput: number
 }
 
 export const GRID_COLS = 32

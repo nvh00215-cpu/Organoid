@@ -8,6 +8,7 @@ interface LobuleGridProps {
   chronicLoad: Float32Array | null
   selected: number
   caption: string
+  label?: string
   onSelect: (index: number) => void
 }
 
@@ -16,6 +17,7 @@ export function LobuleGrid({
   chronicLoad,
   selected,
   caption,
+  label = 'Tissue lattice',
   onSelect,
 }: LobuleGridProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -104,7 +106,7 @@ export function LobuleGrid({
       <canvas
         ref={canvasRef}
         role="img"
-        aria-label="Hepatic lobule lattice"
+        aria-label={label}
         onClick={(e) => {
           const canvas = canvasRef.current
           if (!canvas) return

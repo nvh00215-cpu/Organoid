@@ -1,3 +1,4 @@
+import type { SystemVerdict } from '../model/systemVerdict'
 import type { Verdict } from '../model/verdict'
 
 interface VerdictCardProps {
@@ -9,6 +10,11 @@ interface VerdictCardProps {
   threshold: number
   failedAt: number | null
   failureType: string | null
+  system: SystemVerdict | null
+  kidneyDamage: number
+  heartHerg: number
+  brainConc: number
+  coupled: boolean
 }
 
 export function VerdictCard({
@@ -20,6 +26,11 @@ export function VerdictCard({
   threshold,
   failedAt,
   failureType,
+  system,
+  kidneyDamage,
+  heartHerg,
+  brainConc,
+  coupled,
 }: VerdictCardProps) {
   return (
     <section className="card verdict">
@@ -31,6 +42,7 @@ export function VerdictCard({
         <>
           <div className={`verdict-kind ${verdict.kind}`}>{verdict.label}</div>
           <p className="pathway-tag">{pathwayTag(verdict.pathway)}</p>
+          {system && <p className="systemic-line">{system.headline}</p>}
           <h3>{verdict.headline}</h3>
           <p>{verdict.detail}</p>
           <div className="metrics">
@@ -53,6 +65,22 @@ export function VerdictCard({
             <div className="metric">
               <span>Mean chronic load</span>
               <strong>{meanChronic.toFixed(2)}</strong>
+            </div>
+            <div className="metric">
+              <span>Kidney damage</span>
+              <strong>{(kidneyDamage * 100).toFixed(0)}%</strong>
+            </div>
+            <div className="metric">
+              <span>Peak hERG block</span>
+              <strong>{heartHerg.toFixed(2)}</strong>
+            </div>
+            <div className="metric">
+              <span>Peak brain level</span>
+              <strong>{brainConc.toFixed(2)}</strong>
+            </div>
+            <div className="metric">
+              <span>Plasma coupling</span>
+              <strong>{coupled ? 'on' : 'off'}</strong>
             </div>
             <div className="metric">
               <span>Early stop</span>

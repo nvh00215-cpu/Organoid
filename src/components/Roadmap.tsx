@@ -1,15 +1,14 @@
 export function Roadmap() {
   return (
-    <section className="card kidney">
-      <span className="soon">Coming next</span>
+    <section className="card">
       <div className="card-title">
         <span className="icon-chip">◇</span>
-        Kidney module
+        Systemic plasma
       </div>
       <p className="muted">
-        Same pattern after funding: nephron as the functional unit, an internal cortex–medulla
-        gradient, then a tissue grid for perfusion and injury spread. Heart follows. Shared plasma
-        turns organs into a digital-human screen.
+        Liver and kidney are spatial lattices. Heart and brain are single compartments on the same
+        plasma fold. Clearance feeds back only when coupling is on, so the original liver stories
+        stay intact until you turn it on.
       </p>
     </section>
   )

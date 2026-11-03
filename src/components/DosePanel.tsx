@@ -9,6 +9,7 @@ interface DosePanelProps {
   weightKg: number
   horizonDaysText: string
   dosingPattern: DosingPattern
+  coupleOrgans: boolean
   running: boolean
   onCompound: (id: CompoundId) => void
   onCustom: (next: CustomOverrides) => void
@@ -17,6 +18,7 @@ interface DosePanelProps {
   onWeight: (kg: number) => void
   onHorizonDaysText: (raw: string) => void
   onDosingPattern: (pattern: DosingPattern) => void
+  onCoupleOrgans: (on: boolean) => void
   onRun: () => void
   onReset: () => void
 }
@@ -29,6 +31,7 @@ export function DosePanel({
   weightKg,
   horizonDaysText,
   dosingPattern,
+  coupleOrgans,
   running,
   onCompound,
   onCustom,
@@ -37,6 +40,7 @@ export function DosePanel({
   onWeight,
   onHorizonDaysText,
   onDosingPattern,
+  onCoupleOrgans,
   onRun,
   onReset,
 }: DosePanelProps) {
@@ -208,6 +212,18 @@ export function DosePanel({
         />
         {!horizon.ok && <p className="field-error">{horizon.error}</p>}
       </div>
+
+      <label className="check-row">
+        <input
+          type="checkbox"
+          checked={coupleOrgans}
+          onChange={(e) => onCoupleOrgans(e.target.checked)}
+        />
+        Couple kidney and heart clearance into plasma
+      </label>
+      <p className="note">
+        Off keeps the original liver curve. On, that clearance lowers plasma and can soften liver injury.
+      </p>
 
       <div className="actions">
         <button type="button" className="btn-primary" onClick={onRun} disabled={runDisabled}>
