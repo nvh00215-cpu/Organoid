@@ -1,0 +1,19 @@
+{
+  "scenario": {
+    "compound": "acetaminophen",
+    "doseMgPerKg": 15,
+    "horizonHours": 720,
+    "dosingPattern": "repeated",
+    "seed": 42,
+    "coupleOrgans": false
+  },
+  "sha256": "ea39bf58fe73535f0ba2d0a9b05ecb996ddb56b7b95a49640a35dc4275e778d8",
+  "summary": {
+    "meanFinalDamage": 0.04747390250181501,
+    "peakPlasma": 14.210526315789474,
+    "fracNecrotic": 0,
+    "frameCount": 122,
+    "failedAt": null,
+    "failureType": null
+  }
+}
