@@ -126,6 +126,7 @@ function checkResultInRange(r: SimResult): void {
 describe('organ swarm', () => {
   it('summarizes an overdose run within range', () => {
     const engine = new SwarmEngine(overdoseRequest())
+    engine.runToEnd()
     const result = engine.getResult()
     checkResultInRange(result)
     const state = engine.summarize()
@@ -142,17 +143,18 @@ describe('organ swarm', () => {
     const engine = new SwarmEngine(overdoseRequest())
     const before = engine.getRequest()
     const gshBefore = before.compound.kGSyn
+    expect(engine.runUntil(40)).toBe(40)
     const state = engine.summarize()
     expect(buildLiverPrompt(state)).toContain(`tick=${state.tick}`)
     const agent = new MockLiverAgent()
     const reply = parseOrganReply(await agent.respond(state))
-    if (reply.action !== undefined) {
-      const clamped = clampAction(reply.action.param, reply.action.value)
-      const applied = engine.setParam(clamped.param, clamped.value)
-      expect(applied.appliedValue).toBe(clamped.value)
-      checkResultInRange(engine.getResult())
-      SystemStateSchema.parse(engine.summarize())
-    }
+    const action = reply.action ?? { param: 'kGSyn' as const, value: LIMITS.kGSyn.max }
+    const clamped = clampAction(action.param, action.value)
+    const applied = engine.setParam(clamped.param, clamped.value)
+    expect(applied.appliedValue).toBe(clamped.value)
+    engine.runToEnd()
+    checkResultInRange(engine.getResult())
+    SystemStateSchema.parse(engine.summarize())
     // The original request object is never mutated.
     expect(before.compound.kGSyn).toBe(gshBefore)
   })
@@ -180,6 +182,7 @@ describe('organ swarm', () => {
       for (const bound of [LIMITS[param].min, LIMITS[param].max]) {
         const engine = new SwarmEngine(overdoseRequest())
         const applied = engine.setParam(param, bound)
+        engine.runToEnd()
         expect(applied.appliedValue).toBe(bound)
         expect(applied.clamped).toBe(false)
         checkResultInRange(engine.getResult())

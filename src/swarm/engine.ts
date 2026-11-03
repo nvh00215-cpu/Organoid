@@ -1,6 +1,7 @@
 import { GRID_COUNT, GSH0, NECROTIC } from '../model/types'
 import type { SimRequest, SimResult } from '../model/types'
-import { simulate } from '../model/simulate'
+import { buildResult, cloneSimState, createSimState, setSimParams, stepSim } from '../model/simRunner'
+import type { SimState } from '../model/simRunner'
 import { clampAction } from './clamp'
 import { WHITELISTED_PARAMS } from './types'
 import type { SystemState, WhitelistedParam } from './types'
@@ -59,41 +60,69 @@ export function setParam(request: SimRequest, param: string, value: number): Set
 }
 
 /**
- * Thin stateful wrapper over the deterministic simulate() core.
- * Holds the current request + result; summarize() reads, setParam() re-runs.
+ * Live resumable engine over the deterministic simRunner core.
+ * Holds simulation state; runUntil/runToEnd advance it, setParam swaps the
+ * compound for subsequent steps only, fork branches an independent copy.
+ * Note: getResult() views live buffers (frames/series grow as you step).
  */
 export class SwarmEngine {
-  private currentRequest: SimRequest
-  private currentResult: SimResult
-  private frameIndex: number
+  private sim: SimState
 
   constructor(request: SimRequest) {
-    this.currentRequest = request
-    this.currentResult = simulate(request)
-    this.frameIndex = this.currentResult.frames.length - 1
+    this.sim = createSimState(request)
   }
 
   getRequest(): SimRequest {
-    return this.currentRequest
+    return this.sim.request
   }
 
   getResult(): SimResult {
-    return this.currentResult
+    return buildResult(this.sim)
+  }
+
+  getFrameCount(): number {
+    return this.sim.frames.length
+  }
+
+  isDone(): boolean {
+    return this.sim.step >= this.sim.totalSteps || this.sim.failedAt !== null
   }
 
   summarize(): SystemState {
-    return summarize(this.currentResult, this.frameIndex)
+    return summarize(this.getResult(), this.sim.frames.length - 1)
   }
 
   summarizeAt(frameIndex: number): SystemState {
-    return summarize(this.currentResult, frameIndex)
+    return summarize(this.getResult(), frameIndex)
   }
 
+  /** Advance until frame tick exists, or the run ends. Returns frames reached. */
+  runUntil(tick: number): number {
+    const target = Math.max(0, Math.floor(tick))
+    while (this.sim.frames.length - 1 < target && !this.isDone()) {
+      stepSim(this.sim, 1)
+    }
+    return this.sim.frames.length - 1
+  }
+
+  runToEnd(): void {
+    stepSim(this.sim, this.sim.totalSteps - this.sim.step)
+  }
+
+  /**
+   * Whitelist + clamp, then swap the compound from the current tick forward.
+   * Recorded frames are never rewritten. Repeated calls compose.
+   */
   setParam(param: string, value: number): { appliedValue: number; clamped: boolean } {
-    const next = setParam(this.currentRequest, param, value)
-    this.currentRequest = next.request
-    this.currentResult = simulate(next.request)
-    this.frameIndex = this.currentResult.frames.length - 1
+    const current: SimRequest = { ...this.sim.request, compound: this.sim.compound }
+    const next = setParam(current, param, value)
+    setSimParams(this.sim, next.request.compound)
     return { appliedValue: next.appliedValue, clamped: next.clamped }
+  }
+
+  fork(): SwarmEngine {
+    const copy = new SwarmEngine(this.sim.request)
+    copy.sim = cloneSimState(this.sim)
+    return copy
   }
 }
