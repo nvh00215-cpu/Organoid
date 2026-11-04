@@ -59,8 +59,8 @@ const stateName = pickStateName()
 const state = STATES[stateName]
 
 const VITALS = {
-  kidney: { tick: 40, tHours: 20.0, medullaMean: 4.2, damageMean: 0.15, injuryFrac: 0.1, cortexMean: 2.1 },
-  heart: { tick: 40, tHours: 20.0, herg: 0.45, damage: 0.12 },
+  kidney: { tick: 40, tHours: 20.0, medullaMean: 4.2, damageMean: 0.15, injuryFrac: 0.1, cortexMean: 2.1, corticalLoadNorm: 0.1, recoveryIndex: 0.9 },
+  heart: { tick: 40, tHours: 20.0, herg: 0.45, damage: 0.12, qtLoadNorm: 0.2, qtTimeFrac: 0.3, washoutIndex: 0.8 },
 }
 
 const NARRATIVES = {

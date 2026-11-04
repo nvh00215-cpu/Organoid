@@ -21,12 +21,14 @@ function kidneyVitals(overrides: Partial<KidneyVitals> = {}): KidneyVitals {
     damageMean: 0.01,
     injuryFrac: 0,
     cortexMean: 1,
+    corticalLoadNorm: 0,
+    recoveryIndex: 1,
     ...overrides,
   }
 }
 
 function heartVitals(overrides: Partial<HeartVitals> = {}): HeartVitals {
-  return { tick: 10, tHours: 5, herg: 0.05, damage: 0.01, ...overrides }
+  return { tick: 10, tHours: 5, herg: 0.05, damage: 0.01, qtLoadNorm: 0, qtTimeFrac: 0, washoutIndex: 1, ...overrides }
 }
 
 function fakeResult(): SimResult {

@@ -68,6 +68,8 @@ describe('buildLiverPrompt', () => {
       damageMean: 0.1,
       injuryFrac: 0.08,
       cortexMean: 2,
+      corticalLoadNorm: 0.1,
+      recoveryIndex: 0.9,
     })
     expect(prompt).toContain('You are the Kidney in a simulated patient')
     expect(prompt).toContain('first person')
@@ -81,7 +83,7 @@ describe('buildLiverPrompt', () => {
   })
 
   it('builds heart prompts with persona, rubric and readings', () => {
-    const prompt = buildHeartPrompt({ tick: 10, tHours: 5, herg: 0.5, damage: 0.1 })
+    const prompt = buildHeartPrompt({ tick: 10, tHours: 5, herg: 0.5, damage: 0.1, qtLoadNorm: 0.2, qtTimeFrac: 0.3, washoutIndex: 0.8 })
     expect(prompt).toContain('You are the Heart in a simulated patient')
     expect(prompt).toContain('first person')
     expect(prompt).toContain('CRITICAL if damage is over 0.4')

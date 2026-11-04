@@ -6,11 +6,23 @@
  * Medulla concentrates the cortical filtrate by water reabsorption.
  * Parameters are illustrative, not fitted.
  */
-import { NECROTIC } from './types'
+import { NECROTIC } from './types.ts'
+import type { SimResult } from './types.ts'
 
 export const MEDULLA_THRESHOLD = 3.6
 /** Healthy-kidney contribution to plasma clearance (1/h) at mean perfusion of 1. */
 export const K_KIDNEY_CLEARANCE = 0.004
+/**
+ * Cortical load threshold (filtrate concentration units). Rationale: on the
+ * APAP single-3d ladder, hex-averaged cortical delivery peaks near 0.64 at
+ * therapeutic dose, 1.22 at 2x typical, and 2.66 at high dose, so 1.0 sits
+ * clearly above ordinary therapeutic handling while registering elevated
+ * dosing. Per-hex values run hotter than the mean, so stressed regions
+ * register earlier. Marks proximal secretion-overload stress. Illustrative,
+ * like all constants here. The cortex is never injured by this model;
+ * indices built on this threshold measure load/stress only, never damage.
+ */
+export const CORTEX_THRESHOLD = 1.0
 
 const K_GFR = 0.55
 const K_SEC_VMAX = 0.9
@@ -36,6 +48,87 @@ function clamp01(x: number): number {
   if (x < 0) return 0
   if (x > 1) return 1
   return x
+}
+
+export interface KidneyCorticalLoad {
+  /** Time- and hex-averaged cortical excess above CORTEX_THRESHOLD (>= 0). */
+  readonly load: number
+  /** Saturating 0..1 form: load / (load + CORTEX_THRESHOLD). */
+  readonly loadNorm: number
+}
+
+/** Clamp an optional tick to a valid recorded-frame index. */
+function resolveTick(frameCount: number, uptoTick: number | undefined): number {
+  const last = frameCount - 1
+  if (uptoTick === undefined || !Number.isFinite(uptoTick)) return last
+  return Math.max(0, Math.min(Math.floor(uptoTick), last))
+}
+
+/** Hex-averaged excess above threshold in one cortical array. */
+function meanExcess(values: Float32Array, threshold: number): number {
+  if (values.length === 0) return 0
+  let sum = 0
+  for (let i = 0; i < values.length; i++) {
+    const excess = values[i] - threshold
+    if (excess > 0) sum += excess
+  }
+  return sum / values.length
+}
+
+/**
+ * Cortical load/stress index over recorded frames 0..uptoTick (default: full
+ * run). Trapezoidal time average of hex-averaged max(0, cortex - threshold).
+ * The cortex is never injured by this model; this measures filtrate load and
+ * proximal secretion-overload stress only, never damage. Pure derivation from
+ * recorded frames; the simulation loop is untouched. Integrals are over
+ * recorded (stride-sampled) frames, not every dt step.
+ */
+export function kidneyCorticalLoad(
+  result: SimResult,
+  uptoTick?: number,
+): KidneyCorticalLoad {
+  const frames = result.frames
+  const idx = resolveTick(frames.length, uptoTick)
+  let integral = 0
+  for (let k = 0; k < idx; k++) {
+    const dt = frames[k + 1].t - frames[k].t
+    if (dt <= 0) continue
+    const e0 = meanExcess(frames[k].kidneyCortex, CORTEX_THRESHOLD)
+    const e1 = meanExcess(frames[k + 1].kidneyCortex, CORTEX_THRESHOLD)
+    integral += ((e0 + e1) / 2) * dt
+  }
+  const duration = frames[idx].t - frames[0].t
+  const load = duration > 0 ? integral / duration : 0
+  return { load, loadNorm: load / (load + CORTEX_THRESHOLD) }
+}
+
+/**
+ * Damage-weighted renal recovery index over recorded frames 0..uptoTick
+ * (default: full run): sum_hex(peak_hex - current_hex) / sum_hex(peak_hex),
+ * where peak_hex is the max damage over the prefix and current_hex is the
+ * damage at uptoTick. Returns 1.0 when sum(peak) is 0: 1.0 means intact or
+ * fully recovered, 0.0 means no recovery from peak. Bounded 0..1. Pure
+ * derivation; peaks are over recorded (stride-sampled) frames, not every dt
+ * step, so they need not equal in-loop aggregates such as
+ * kidneyPeakMeanDamage.
+ */
+export function kidneyRecoveryIndex(result: SimResult, uptoTick?: number): number {
+  const frames = result.frames
+  const idx = resolveTick(frames.length, uptoTick)
+  const n = frames[0].kidneyDamage.length
+  let sumPeak = 0
+  let sumRelief = 0
+  for (let i = 0; i < n; i++) {
+    let peak = 0
+    for (let k = 0; k <= idx; k++) {
+      const d = frames[k].kidneyDamage[i]
+      if (d > peak) peak = d
+    }
+    sumPeak += peak
+    sumRelief += peak - frames[idx].kidneyDamage[i]
+  }
+  if (sumPeak === 0) return 1
+  return sumRelief / sumPeak
 }
 
 export function stepKidney(

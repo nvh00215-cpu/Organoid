@@ -1,4 +1,6 @@
 import { GRID_COUNT, NECROTIC } from '../model/types.ts'
+import { heartQtLoad, heartWashoutIndex } from '../model/heart.ts'
+import { kidneyCorticalLoad, kidneyRecoveryIndex } from '../model/kidney.ts'
 import type { SimResult } from '../model/types.ts'
 import { z } from 'zod'
 import type { Distress } from './types.ts'
@@ -34,6 +36,8 @@ export const KidneyVitalsSchema = z.object({
   damageMean: z.number().finite().min(0).max(1),
   injuryFrac: z.number().finite().min(0).max(1),
   cortexMean: z.number().finite().nonnegative(),
+  corticalLoadNorm: z.number().finite().min(0).max(1),
+  recoveryIndex: z.number().finite().min(0).max(1),
 })
 export type KidneyVitals = z.infer<typeof KidneyVitalsSchema>
 
@@ -42,6 +46,9 @@ export const HeartVitalsSchema = z.object({
   tHours: z.number().finite().nonnegative(),
   herg: z.number().finite().min(0).max(1),
   damage: z.number().finite().min(0).max(1),
+  qtLoadNorm: z.number().finite().min(0).max(1),
+  qtTimeFrac: z.number().finite().min(0).max(1),
+  washoutIndex: z.number().finite().min(0).max(1),
 })
 export type HeartVitals = z.infer<typeof HeartVitalsSchema>
 
@@ -63,6 +70,8 @@ export function summarizeKidney(result: SimResult, frameIndex: number): KidneyVi
     damageMean: point.kidneyDamage,
     injuryFrac: injured / GRID_COUNT,
     cortexMean: cortexSum / GRID_COUNT,
+    corticalLoadNorm: kidneyCorticalLoad(result, idx).loadNorm,
+    recoveryIndex: kidneyRecoveryIndex(result, idx),
   }
 }
 
@@ -75,6 +84,9 @@ export function summarizeHeart(result: SimResult, frameIndex: number): HeartVita
     tHours: frame.t,
     herg: frame.heartHerg,
     damage: frame.heartDamage,
+    qtLoadNorm: heartQtLoad(result, idx).loadNorm,
+    qtTimeFrac: heartQtLoad(result, idx).timeFrac,
+    washoutIndex: heartWashoutIndex(result, idx),
   }
 }
 

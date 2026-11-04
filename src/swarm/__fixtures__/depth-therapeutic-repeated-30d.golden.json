@@ -1,0 +1,18 @@
+{
+  "scenario": {
+    "doseMgPerKg": 15,
+    "horizonHours": 720,
+    "dosingPattern": "repeated",
+    "coupleOrgans": false
+  },
+  "sha256": "3ad4ef793d35d68fac6eb9681572f6cc0775cc0bbb35e80aadc906b0e7a1a6a8",
+  "metrics": {
+    "corticalLoad": 0,
+    "corticalLoadNorm": 0,
+    "kidneyRecovery": 1,
+    "qtLoad": 0,
+    "qtLoadNorm": 0,
+    "qtTimeFrac": 0,
+    "washout": 0
+  }
+}

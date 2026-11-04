@@ -1,0 +1,18 @@
+{
+  "scenario": {
+    "doseMgPerKg": 72,
+    "horizonHours": 72,
+    "dosingPattern": "single",
+    "coupleOrgans": false
+  },
+  "sha256": "347ce4a9d7e0752cefa292a8e4625db65b9812baf6cfea853a8d388fd12c16af",
+  "metrics": {
+    "corticalLoad": 0.13626801048370984,
+    "corticalLoadNorm": 0.11992594108646999,
+    "kidneyRecovery": 0.2075662906496183,
+    "qtLoad": 0.012305900898494648,
+    "qtLoadNorm": 0.01984822725563653,
+    "qtTimeFrac": 0.11944444444444444,
+    "washout": 0.999999867191943
+  }
+}

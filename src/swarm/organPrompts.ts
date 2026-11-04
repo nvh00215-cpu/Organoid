@@ -53,7 +53,7 @@ export function buildKidneyPrompt(vitals: KidneyVitals): string {
     KIDNEY_RUBRIC,
     NO_ACTION_LINE,
     NO_INVENT_LINE,
-    `Kidney readings (exact): tick=${v.tick} tHours=${v.tHours.toFixed(1)} medullaMean=${v.medullaMean.toFixed(2)} damageMean=${v.damageMean.toFixed(3)} injuryFrac=${v.injuryFrac.toFixed(3)} cortexMean=${v.cortexMean.toFixed(2)}`,
+    `Kidney readings (exact): tick=${v.tick} tHours=${v.tHours.toFixed(1)} medullaMean=${v.medullaMean.toFixed(2)} damageMean=${v.damageMean.toFixed(3)} injuryFrac=${v.injuryFrac.toFixed(3)} cortexMean=${v.cortexMean.toFixed(2)} corticalLoad=${v.corticalLoadNorm.toFixed(3)} recovery=${v.recoveryIndex.toFixed(3)}`,
     JSON_CONTRACT_LINE,
   ].join('\n')
 }
@@ -66,7 +66,7 @@ export function buildHeartPrompt(vitals: HeartVitals): string {
     HEART_RUBRIC,
     NO_ACTION_LINE,
     NO_INVENT_LINE,
-    `Heart readings (exact): tick=${v.tick} tHours=${v.tHours.toFixed(1)} herg=${v.herg.toFixed(3)} damage=${v.damage.toFixed(3)}`,
+    `Heart readings (exact): tick=${v.tick} tHours=${v.tHours.toFixed(1)} herg=${v.herg.toFixed(3)} damage=${v.damage.toFixed(3)} qtLoad=${v.qtLoadNorm.toFixed(3)} qtTimeFrac=${v.qtTimeFrac.toFixed(3)} washout=${v.washoutIndex.toFixed(3)}`,
     JSON_CONTRACT_LINE,
   ].join('\n')
 }
