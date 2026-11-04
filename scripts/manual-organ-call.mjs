@@ -1,5 +1,6 @@
 // Manual smoke test for POST /api/organ. Requires `npm run dev` running.
-// Usage: node scripts/manual-organ-call.mjs [--state safe|moderate|crisis]
+// Usage: node scripts/manual-organ-call.mjs [--state safe|moderate|crisis] [--organ liver|kidney|heart]
+//        node scripts/manual-organ-call.mjs --narrative [--state safe|moderate|crisis]
 // Prints only the status and the model reply text or error message.
 // It never prints keys, headers, or environment values.
 const STATES = {
@@ -45,21 +46,61 @@ const STATES = {
   },
 }
 
-function pickState() {
+function pickStateName() {
   const flag = process.argv.indexOf('--state')
-  if (flag === -1) return STATES.default
+  if (flag === -1) return 'default'
   const name = process.argv[flag + 1]
-  if (name === 'safe' || name === 'moderate' || name === 'crisis') return STATES[name]
+  if (name === 'safe' || name === 'moderate' || name === 'crisis') return name
   console.log(`Unknown --state "${name ?? '(missing)'}". Use safe, moderate, or crisis.`)
   process.exit(1)
 }
 
-const state = pickState()
+const stateName = pickStateName()
+const state = STATES[stateName]
 
-const response = await fetch('http://localhost:5173/api/organ', {
+const VITALS = {
+  kidney: { tick: 40, tHours: 20.0, medullaMean: 4.2, damageMean: 0.15, injuryFrac: 0.1, cortexMean: 2.1 },
+  heart: { tick: 40, tHours: 20.0, herg: 0.45, damage: 0.12 },
+}
+
+const NARRATIVES = {
+  default: { label: 'RENAL RISK', tHours: 20.0, liver: 'HIGH', kidney: 'MODERATE', heart: 'LOW' },
+  safe: { label: 'NO ORGAN THRESHOLD CROSSED', tHours: 5.0, liver: 'LOW', kidney: 'LOW', heart: 'LOW' },
+  moderate: { label: 'RENAL RISK', tHours: 20.0, liver: 'HIGH', kidney: 'MODERATE', heart: 'LOW' },
+  crisis: { label: 'LIVER FAILURE', tHours: 30.0, liver: 'CRITICAL', kidney: 'HIGH', heart: 'MODERATE' },
+}
+
+function pickMode() {
+  const organFlag = process.argv.indexOf('--organ')
+  const narrative = process.argv.includes('--narrative')
+  if (narrative && organFlag !== -1) {
+    console.log('Use either --narrative or --organ, not both.')
+    process.exit(1)
+  }
+  if (narrative) return { kind: 'narrative' }
+  if (organFlag === -1) return { kind: 'organ', organ: 'liver' }
+  const organ = process.argv[organFlag + 1]
+  if (organ === 'liver' || organ === 'kidney' || organ === 'heart') return { kind: 'organ', organ }
+  console.log(`Unknown --organ "${organ ?? '(missing)'}". Use liver, kidney, or heart.`)
+  process.exit(1)
+}
+
+const mode = pickMode()
+const url =
+  mode.kind === 'narrative'
+    ? 'http://localhost:5173/api/narrative'
+    : 'http://localhost:5173/api/organ'
+const payload =
+  mode.kind === 'narrative'
+    ? NARRATIVES[stateName]
+    : mode.organ === 'liver'
+      ? { organ: 'liver', state }
+      : { organ: mode.organ, state: VITALS[mode.organ] }
+
+const response = await fetch(url, {
   method: 'POST',
   headers: { 'content-type': 'application/json' },
-  body: JSON.stringify({ organ: 'liver', state }),
+  body: JSON.stringify(payload),
   signal: AbortSignal.timeout(60000),
 })
 console.log(`status: ${response.status}`)

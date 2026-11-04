@@ -58,7 +58,7 @@ function canonicalPoint(p: ChartPoint): unknown {
   }
 }
 
-function canonicalResult(r: SimResult): unknown {
+export function canonicalResult(r: SimResult): unknown {
   return {
     request: {
       compound: canonicalCompound(r.request.compound),

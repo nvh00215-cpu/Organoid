@@ -2,7 +2,7 @@ import { clampAction } from './clamp'
 import type { CallBudget } from './budget'
 import type { OrganAgent } from './LiverAgent'
 import { OrganReplySchema } from './types'
-import type { Distress, OrganReply } from './types'
+import type { AgentReply, Distress } from './types'
 
 export interface UsageEntry {
   readonly promptChars: number
@@ -72,7 +72,7 @@ export class RealOrganAgent<V> implements OrganAgent<V> {
     return { calls: this.calls, approxTokens: this.approxTokens, entries: this.entries }
   }
 
-  async respond(state: V): Promise<OrganReply> {
+  async respond(state: V): Promise<AgentReply> {
     const valid = this.parseVitals(state)
     const prompt = this.buildPrompt(valid)
     const first = await this.attempt(valid, prompt)
@@ -94,7 +94,7 @@ export class RealOrganAgent<V> implements OrganAgent<V> {
   }
 
   /** One POST + parse + validate round. Null on any failure; usage logged. */
-  private async attempt(vitals: V, prompt: string): Promise<OrganReply | null> {
+  private async attempt(vitals: V, prompt: string): Promise<AgentReply | null> {
     if (!this.allowsCall()) return null
     try {
       const response = await fetch(this.endpoint, {
@@ -120,8 +120,14 @@ export class RealOrganAgent<V> implements OrganAgent<V> {
       const reply = OrganReplySchema.safeParse(data)
       if (!reply.success) return null
       if (reply.data.action === undefined) return reply.data
-      const clamped = clampAction(reply.data.action.param, reply.data.action.value)
-      return { ...reply.data, action: { param: clamped.param, value: clamped.value } }
+      const original = reply.data.action
+      const clamped = clampAction(original.param, original.value)
+      if (!clamped.clamped) return reply.data
+      return {
+        ...reply.data,
+        action: { param: clamped.param, value: clamped.value },
+        requestedAction: original,
+      }
     } catch {
       return null
     }

@@ -22,6 +22,10 @@ export const OrganReplySchema = z.object({
 })
 export type OrganReply = z.infer<typeof OrganReplySchema>
 
+export type AgentReply = OrganReply & {
+  readonly requestedAction?: AgentAction
+}
+
 /**
  * Small JSON snapshot of the liver's current state. Every number is derived
  * from engine output by summarize(); agents must never invent these values.

@@ -5,12 +5,16 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin } from 'vite'
 import { z } from 'zod'
 import { buildLiverPrompt } from '../swarm/LiverAgent.ts'
+import { NarrativeContextSchema, buildSystemPrompt } from '../swarm/orchestrator.ts'
+import { buildHeartPrompt, buildKidneyPrompt } from '../swarm/organPrompts.ts'
+import { HeartVitalsSchema, KidneyVitalsSchema } from '../swarm/organVitals.ts'
 import { SystemStateSchema } from '../swarm/types.ts'
 
-const OrganRequestSchema = z.object({
-  organ: z.literal('liver'),
-  state: SystemStateSchema,
-})
+const OrganRequestSchema = z.discriminatedUnion('organ', [
+  z.object({ organ: z.literal('liver'), state: SystemStateSchema }),
+  z.object({ organ: z.literal('kidney'), state: KidneyVitalsSchema }),
+  z.object({ organ: z.literal('heart'), state: HeartVitalsSchema }),
+])
 
 export interface OrganProxyOptions {
   readonly apiKey: string
@@ -19,6 +23,7 @@ export interface OrganProxyOptions {
 }
 
 const MAX_BODY_BYTES = 65536
+const MAX_TEXT_CHARS = 4000
 const UPSTREAM_TIMEOUT_MS = 25000
 const MAX_OUTPUT_TOKENS = 1000
 const REASONING_EFFORT = 'minimal'
@@ -125,9 +130,58 @@ async function handleOrganRequest(
     sendJson(res, 400, { error: 'Invalid organ request' })
     return
   }
-  const prompt = buildLiverPrompt(request.data.state)
+  let prompt: string
+  if (request.data.organ === 'liver') {
+    prompt = buildLiverPrompt(request.data.state)
+  } else if (request.data.organ === 'kidney') {
+    prompt = buildKidneyPrompt(request.data.state)
+  } else {
+    prompt = buildHeartPrompt(request.data.state)
+  }
   try {
     const text = await callModel(options, prompt)
+    sendJson(res, 200, { text })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : ''
+    if (message === 'unparseable model response') {
+      sendJson(res, 502, { error: 'Model returned an unparseable response' })
+    } else {
+      sendJson(res, 502, { error: 'Model call failed' })
+    }
+  }
+}
+
+async function handleNarrativeRequest(
+  req: IncomingMessage,
+  res: ServerResponse,
+  options: OrganProxyOptions,
+): Promise<void> {
+  if (req.method !== 'POST') {
+    sendJson(res, 405, { error: 'Method not allowed' })
+    return
+  }
+  if (options.apiKey === '') {
+    sendJson(res, 500, { error: 'Model API key is not configured' })
+    return
+  }
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(await readBody(req, MAX_BODY_BYTES)) as unknown
+  } catch {
+    sendJson(res, 400, { error: 'Invalid JSON body' })
+    return
+  }
+  const request = NarrativeContextSchema.safeParse(parsed)
+  if (!request.success) {
+    sendJson(res, 400, { error: 'Invalid narrative request' })
+    return
+  }
+  try {
+    const text = await callModel(options, buildSystemPrompt(request.data))
+    if (text.length > MAX_TEXT_CHARS) {
+      sendJson(res, 502, { error: 'Model returned an unparseable response' })
+      return
+    }
     sendJson(res, 200, { text })
   } catch (error) {
     const message = error instanceof Error ? error.message : ''
@@ -145,6 +199,13 @@ export function organProxyPlugin(options: OrganProxyOptions): Plugin {
     configureServer(server) {
       server.middlewares.use('/api/organ', (req, res) => {
         void handleOrganRequest(req, res, options).catch(() => {
+          if (!res.headersSent) {
+            sendJson(res, 500, { error: 'Organ proxy failed' })
+          }
+        })
+      })
+      server.middlewares.use('/api/narrative', (req, res) => {
+        void handleNarrativeRequest(req, res, options).catch(() => {
           if (!res.headersSent) {
             sendJson(res, 500, { error: 'Organ proxy failed' })
           }
