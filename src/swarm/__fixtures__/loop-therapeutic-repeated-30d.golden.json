@@ -1,0 +1,15 @@
+{
+  "scenario": {
+    "doseMgPerKg": 15,
+    "horizonHours": 720,
+    "dosingPattern": "repeated",
+    "coupleOrgans": false,
+    "metaboliteLoop": true
+  },
+  "sha256": "14ab5e0a796477926f619fd0b346c3b74186233324f9a67a212c2df3c3e97a52",
+  "metrics": {
+    "sysMetaboliteFinal": 0.010441821912368223,
+    "sysMetabolitePeak": 0.19483152111453567
+  },
+  "headline": "CHRONIC DEGENERATION"
+}

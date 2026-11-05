@@ -9,6 +9,7 @@
 import { NECROTIC } from './types.ts'
 import type { SimResult } from './types.ts'
 
+
 export const MEDULLA_THRESHOLD = 3.6
 /** Healthy-kidney contribution to plasma clearance (1/h) at mean perfusion of 1. */
 export const K_KIDNEY_CLEARANCE = 0.004
@@ -23,6 +24,14 @@ export const K_KIDNEY_CLEARANCE = 0.004
  * indices built on this threshold measure load/stress only, never damage.
  */
 export const CORTEX_THRESHOLD = 1.0
+/**
+ * Medullary retention gain per unit of systemic metabolite pool. Mirrors
+ * K_RECIRC in systemicPlasma.ts (drift-guarded by test); defined here so
+ * kidney.ts needs no new module edge. Therapeutic-scale pools add a
+ * fraction of a concentration unit to medullary target; overdose pools add
+ * a few units, comparable to the congestion term. Illustrative.
+ */
+export const K_RECIRC = 0.3
 
 const K_GFR = 0.55
 const K_SEC_VMAX = 0.9
@@ -141,6 +150,7 @@ export function stepKidney(
   fold: number,
   kidneyScale: number,
   dt: number,
+  sysMetabolite = 0,
 ): KidneyFlux {
   const n = damage.length
   const secretion = (K_SEC_VMAX * fold) / (K_SEC_KM + fold + 1e-9)
@@ -166,7 +176,9 @@ export function stepKidney(
     const m0 = medulla[i]
     const d0 = damage[i]
     const nextC = Math.max(0, c0 + dt * K_WASH * (delivered - c0))
-    const targetM = CONC_FACTOR * kidneyScale * (1 + 0.85 * congestion) * nextC
+    // Explicitly guarded: a zero pool adds exactly 0 (bit-identical off-mode).
+    const retention = sysMetabolite > 0 ? K_RECIRC * sysMetabolite : 0
+    const targetM = CONC_FACTOR * kidneyScale * (1 + 0.85 * congestion) * nextC + retention
     const nextM = Math.max(0, m0 + dt * (K_CONC * (targetM - m0) - K_MED_CLEAR * m0))
     const excess = Math.max(0, nextM - MEDULLA_THRESHOLD)
     const drive = excess / (excess + DRIVE_KM)

@@ -70,6 +70,13 @@ export interface SimRequest {
    * Default false keeps the original liver-only plasma trajectory.
    */
   coupleOrgans?: boolean
+  /**
+   * When true, a systemic metabolite pool is tracked: hepatic + renal
+   * metabolite output accumulates, clears renally (reduced by kidney
+   * injury), and retained metabolite adds to medullary burden.
+   * Default off keeps byte-identical behavior (pool stays 0).
+   */
+  metaboliteLoop?: boolean
 }
 
 export interface ChartPoint {
@@ -150,6 +157,10 @@ export interface SimResult {
   brainFinalDamage: number
   brainClearance: number
   metaboliteOutput: number
+  /** Final systemic metabolite pool (0 unless metaboliteLoop is on). Hash-excluded. */
+  sysMetaboliteFinal: number
+  /** Peak systemic metabolite pool (0 unless metaboliteLoop is on). Hash-excluded. */
+  sysMetabolitePeak: number
   /** Grand-mean GSH at end of run (0..1). */
   meanFinalGsh: number
   /** Time-integral of mean Zone-3 metabolite over the run (conc·h). */

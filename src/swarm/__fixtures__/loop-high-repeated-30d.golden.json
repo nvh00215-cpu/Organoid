@@ -1,0 +1,15 @@
+{
+  "scenario": {
+    "doseMgPerKg": 72,
+    "horizonHours": 720,
+    "dosingPattern": "repeated",
+    "coupleOrgans": false,
+    "metaboliteLoop": true
+  },
+  "sha256": "de8f8af6b75c4a7937e7b53bcb1955c05729626a0e95bca955307a0bf339cf75",
+  "metrics": {
+    "sysMetaboliteFinal": 2.5935336040838735,
+    "sysMetabolitePeak": 2.5935336040838735
+  },
+  "headline": "LIVER FAILURE · RENAL FAILURE · CARDIAC FAILURE · NEURO FAILURE"
+}

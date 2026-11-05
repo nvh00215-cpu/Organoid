@@ -30,7 +30,7 @@ import { stepBrain } from './brain'
 import { hergBlock, stepHeart } from './heart'
 import { stepKidney } from './kidney'
 import { bolusDelta, initialPlasma, injectIfDue } from './plasma'
-import { exposureFold, stepCoupledPlasma, typicalPlasma } from './systemicPlasma'
+import { exposureFold, stepCoupledPlasma, stepMetabolitePool, typicalPlasma } from './systemicPlasma'
 
 let neighborCache: number[][] | null = null
 
@@ -56,6 +56,7 @@ export interface SimState {
   compound: CompoundParams
   readonly dosingPattern: DosingPattern
   readonly coupleOrgans: boolean
+  readonly metaboliteLoop: boolean
   readonly stride: number
   readonly totalSteps: number
   bolus: number
@@ -81,6 +82,8 @@ export interface SimState {
   heartClearance: number
   brainClearance: number
   metaboliteOutput: number
+  sysMetabolite: number
+  sysMetabolitePeak: number
   kidneyPeakMedulla: number
   kidneyPeakMeanDamage: number
   heartPeakHerg: number
@@ -104,6 +107,7 @@ export interface SimState {
 export function createSimState(request: SimRequest): SimState {
   const { compound, doseMgPerKg, horizonHours, dosingPattern, seed } = request
   const coupleOrgans = request.coupleOrgans === true
+  const metaboliteLoop = request.metaboliteLoop === true
   const perfusion = buildPerfusion(seed)
   const nbrs = neighbors()
   const lobules: [ZoneState, ZoneState, ZoneState][] = Array.from(
@@ -132,6 +136,8 @@ export function createSimState(request: SimRequest): SimState {
   const heartClearance = 0
   const brainClearance = 0
   const metaboliteOutput = 0
+  const sysMetabolite = 0
+  const sysMetabolitePeak = 0
   const kidneyPeakMedulla = 0
   const kidneyPeakMeanDamage = 0
   const heartPeakHerg = heartHerg
@@ -157,6 +163,9 @@ export function createSimState(request: SimRequest): SimState {
     dosingPattern,
     coupleOrgans,
     stride,
+    metaboliteLoop,
+    sysMetabolite,
+    sysMetabolitePeak,
     totalSteps: Math.round(horizonHours / DT),
     bolus,
     typical,
@@ -316,6 +325,7 @@ function stepOnce(state: SimState): void {
   const bolus = state.bolus
   const typical = state.typical
   const coupleOrgans = state.coupleOrgans
+  const metaboliteLoop = state.metaboliteLoop
   const stride = state.stride
   const steps = state.totalSteps
   let plasma = state.plasma
@@ -327,6 +337,8 @@ function stepOnce(state: SimState): void {
   let heartClearance = state.heartClearance
   let brainClearance = state.brainClearance
   let metaboliteOutput = state.metaboliteOutput
+  let sysMetabolite = state.sysMetabolite
+  let sysMetabolitePeak = state.sysMetabolitePeak
   let kidneyPeakMedulla = state.kidneyPeakMedulla
   let kidneyPeakMeanDamage = state.kidneyPeakMeanDamage
   let heartPeakHerg = state.heartPeakHerg
@@ -387,6 +399,7 @@ function stepOnce(state: SimState): void {
     fold,
     compound.kidneyScale,
     DT,
+    sysMetabolite,
   )
   const heart = stepHeart(heartDamage, fold, compound.heartScale, DT)
   const brain = stepBrain(brainConc, brainDamage, fold, compound.brainScale, DT)
@@ -398,6 +411,10 @@ function stepOnce(state: SimState): void {
   heartClearance = heart.clearanceRate
   brainClearance = brain.clearanceRate
   metaboliteOutput = meanM3 + kidney.metaboliteOutput
+  if (metaboliteLoop) {
+    sysMetabolite = stepMetabolitePool(sysMetabolite, metaboliteOutput, 1 - kidney.meanDamage, DT)
+    if (sysMetabolite > sysMetabolitePeak) sysMetabolitePeak = sysMetabolite
+  }
   lastKidneyMean = kidney.meanDamage
   lastKidneyMedulla = kidney.meanMedulla
   if (kidney.meanMedulla > kidneyPeakMedulla) kidneyPeakMedulla = kidney.meanMedulla
@@ -436,6 +453,8 @@ function stepOnce(state: SimState): void {
   state.heartClearance = heartClearance
   state.brainClearance = brainClearance
   state.metaboliteOutput = metaboliteOutput
+  state.sysMetabolite = sysMetabolite
+  state.sysMetabolitePeak = sysMetabolitePeak
   state.kidneyPeakMedulla = kidneyPeakMedulla
   state.kidneyPeakMeanDamage = kidneyPeakMeanDamage
   state.heartPeakHerg = heartPeakHerg
@@ -489,6 +508,7 @@ export function cloneSimState(state: SimState): SimState {
     compound: state.compound,
     dosingPattern: state.dosingPattern,
     coupleOrgans: state.coupleOrgans,
+    metaboliteLoop: state.metaboliteLoop,
     stride: state.stride,
     totalSteps: state.totalSteps,
     bolus: state.bolus,
@@ -516,6 +536,8 @@ export function cloneSimState(state: SimState): SimState {
     heartClearance: state.heartClearance,
     brainClearance: state.brainClearance,
     metaboliteOutput: state.metaboliteOutput,
+    sysMetabolite: state.sysMetabolite,
+    sysMetabolitePeak: state.sysMetabolitePeak,
     kidneyPeakMedulla: state.kidneyPeakMedulla,
     kidneyPeakMeanDamage: state.kidneyPeakMeanDamage,
     heartPeakHerg: state.heartPeakHerg,
@@ -570,6 +592,8 @@ export function buildResult(state: SimState): SimResult {
   const brainDamage = state.brainDamage
   const brainClearance = state.brainClearance
   const metaboliteOutput = state.metaboliteOutput
+  const sysMetabolite = state.sysMetabolite
+  const sysMetabolitePeak = state.sysMetabolitePeak
   const exposureIndex = state.exposureIndex
   const last = frames[frames.length - 1]
   let necrotic = 0
@@ -644,6 +668,8 @@ export function buildResult(state: SimState): SimResult {
     brainFinalDamage: brainDamage,
     brainClearance,
     metaboliteOutput,
+    sysMetaboliteFinal: sysMetabolite,
+    sysMetabolitePeak,
     meanFinalGsh,
     exposureIndex,
   }

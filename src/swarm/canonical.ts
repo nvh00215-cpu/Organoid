@@ -68,6 +68,7 @@ export function canonicalResult(r: SimResult): unknown {
       dosingPattern: r.request.dosingPattern,
       seed: r.request.seed,
       coupleOrgans: r.request.coupleOrgans === true,
+      // NOTE: metaboliteLoop excluded: absent/false/undefined all hash byte-identically.
     },
     cols: r.cols,
     rows: r.rows,
@@ -114,6 +115,8 @@ export function canonicalResult(r: SimResult): unknown {
     brainFinalDamage: r.brainFinalDamage,
     brainClearance: r.brainClearance,
     metaboliteOutput: r.metaboliteOutput,
+    // NOTE: sysMetaboliteFinal/sysMetabolitePeak excluded: loop metrics are
+    // pinned by dedicated loop goldens, keeping historical hashes identical.
     meanFinalGsh: r.meanFinalGsh,
     exposureIndex: r.exposureIndex,
   }

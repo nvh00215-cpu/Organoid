@@ -1,0 +1,15 @@
+{
+  "scenario": {
+    "doseMgPerKg": 72,
+    "horizonHours": 72,
+    "dosingPattern": "single",
+    "coupleOrgans": false,
+    "metaboliteLoop": true
+  },
+  "sha256": "420df213c578898c66d1dbaa26bc5a686e22ef845ad3c957c825a18cadf1bf58",
+  "metrics": {
+    "sysMetaboliteFinal": 0.00003700932624901413,
+    "sysMetabolitePeak": 1.6113305642718279
+  },
+  "headline": "TOXIC · RENAL RISK · CARDIAC RISK · NEURO RISK"
+}

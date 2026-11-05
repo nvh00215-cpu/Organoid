@@ -1,0 +1,15 @@
+{
+  "scenario": {
+    "doseMgPerKg": 6,
+    "horizonHours": 72,
+    "dosingPattern": "single",
+    "coupleOrgans": false,
+    "metaboliteLoop": true
+  },
+  "sha256": "b0f99ac978213adae30b1ba074502678db5b64d41c30af4f1695ad898309e768",
+  "metrics": {
+    "sysMetaboliteFinal": 3.4578898070405434e-8,
+    "sysMetabolitePeak": 0.06991084582839736
+  },
+  "headline": "NO ORGAN THRESHOLD CROSSED"
+}
