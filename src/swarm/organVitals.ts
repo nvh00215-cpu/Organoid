@@ -2,6 +2,7 @@ import { GRID_COUNT, NECROTIC } from '../model/types.ts'
 import { heartQtLoad, heartWashoutIndex } from '../model/heart.ts'
 import { kidneyCorticalLoad, kidneyRecoveryIndex } from '../model/kidney.ts'
 import type { SimResult } from '../model/types.ts'
+import { LIMITS } from './clamp.ts'
 import { z } from 'zod'
 import type { Distress } from './types.ts'
 
@@ -9,6 +10,9 @@ import type { Distress } from './types.ts'
 export const KIDNEY_MEDULLA_THRESHOLD = 3.6
 /** Mirror of HERG_THRESHOLD in model/heart.ts (drift-guarded by test). */
 export const HEART_HERG_THRESHOLD = 0.38
+
+/** Mirror of NEURO_THRESHOLD in model/brain.ts (drift-guarded by test). */
+export const BRAIN_NEURO_THRESHOLD = 0.85
 
 /** Kidney distress bands. Injury cutoffs are percents; see prompt rubric. */
 export const KIDNEY_BANDS = {
@@ -27,6 +31,12 @@ export const HEART_BANDS = {
   highDamage: 0.2,
   highHerg: 0.55,
   moderateDamage: 0.08,
+} as const
+
+/** Brain distress bands. Peak-damage cutoffs mirror the engine verdict (0.08 / 0.75). */
+export const BRAIN_BANDS = {
+  criticalPeakDamage: 0.75,
+  highPeakDamage: 0.08,
 } as const
 
 export const KidneyVitalsSchema = z.object({
@@ -51,6 +61,17 @@ export const HeartVitalsSchema = z.object({
   washoutIndex: z.number().finite().min(0).max(1),
 })
 export type HeartVitals = z.infer<typeof HeartVitalsSchema>
+
+export const BrainVitalsSchema = z.object({
+  tick: z.number().int().nonnegative(),
+  tHours: z.number().finite().nonnegative(),
+  conc: z.number().finite().nonnegative(),
+  damage: z.number().finite().min(0).max(1),
+  peakConc: z.number().finite().nonnegative(),
+  peakDamage: z.number().finite().min(0).max(1),
+  efflux: z.number().finite().min(LIMITS.kBrainEfflux.min).max(LIMITS.kBrainEfflux.max).optional(),
+})
+export type BrainVitals = z.infer<typeof BrainVitalsSchema>
 
 export function summarizeKidney(result: SimResult, frameIndex: number): KidneyVitals {
   const last = result.frames.length - 1
@@ -90,6 +111,27 @@ export function summarizeHeart(result: SimResult, frameIndex: number): HeartVita
   }
 }
 
+export function summarizeBrain(result: SimResult, frameIndex: number, efflux = 1): BrainVitals {
+  const last = result.frames.length - 1
+  const idx = Math.max(0, Math.min(frameIndex, last))
+  const frame = result.frames[idx]
+  let peakConc = 0
+  let peakDamage = 0
+  for (let i = 0; i <= idx; i++) {
+    if (result.frames[i].brainConc > peakConc) peakConc = result.frames[i].brainConc
+    if (result.frames[i].brainDamage > peakDamage) peakDamage = result.frames[i].brainDamage
+  }
+  return {
+    tick: idx,
+    tHours: frame.t,
+    conc: frame.brainConc,
+    damage: frame.brainDamage,
+    peakConc,
+    peakDamage,
+    efflux,
+  }
+}
+
 export function kidneyFallbackDistress(v: KidneyVitals): Distress {
   if (v.medullaMean > KIDNEY_BANDS.criticalMedulla || v.injuryFrac * 100 > KIDNEY_BANDS.criticalInjuryPct) {
     return 'CRITICAL'
@@ -111,5 +153,12 @@ export function heartFallbackDistress(v: HeartVitals): Distress {
   if (v.damage > HEART_BANDS.criticalDamage || v.herg > HEART_BANDS.criticalHerg) return 'CRITICAL'
   if (v.damage > HEART_BANDS.highDamage || v.herg > HEART_BANDS.highHerg) return 'HIGH'
   if (v.damage > HEART_BANDS.moderateDamage || v.herg > HEART_HERG_THRESHOLD) return 'MODERATE'
+  return 'LOW'
+}
+
+export function brainFallbackDistress(v: BrainVitals): Distress {
+  if (v.peakDamage > BRAIN_BANDS.criticalPeakDamage) return 'CRITICAL'
+  if (v.peakDamage > BRAIN_BANDS.highPeakDamage) return 'HIGH'
+  if (v.conc > BRAIN_NEURO_THRESHOLD) return 'MODERATE'
   return 'LOW'
 }

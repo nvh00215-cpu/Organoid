@@ -1,12 +1,16 @@
 import { GRID_COUNT, GSH0, NECROTIC } from '../model/types'
-import type { SimRequest, SimResult } from '../model/types'
+import type { CompoundParams, SimRequest, SimResult } from '../model/types'
 import { buildResult, cloneSimState, createSimState, setSimParams, stepSim } from '../model/simRunner'
 import type { SimState } from '../model/simRunner'
-import { clampAction } from './clamp'
-import { WHITELISTED_PARAMS } from './types'
-import type { SystemState, WhitelistedParam } from './types'
+import { RATE_LIMITS, clampAction } from './clamp'
+import { BRAIN_SETTABLE_PARAMS, WHITELISTED_PARAMS } from './types'
+import type { BrainSettableParam, SystemState, WhitelistedParam } from './types'
 
 const MEAN_GSH0 = (GSH0[0] + GSH0[1] + GSH0[2]) / 3
+
+function isBrainSettable(param: string): param is BrainSettableParam {
+  return (BRAIN_SETTABLE_PARAMS as readonly string[]).includes(param)
+}
 
 function isWhitelisted(param: string): param is WhitelistedParam {
   return (WHITELISTED_PARAMS as readonly string[]).includes(param)
@@ -45,17 +49,26 @@ export interface SetParamResult {
  * request object. The input request is never mutated. Unknown params throw.
  */
 export function setParam(request: SimRequest, param: string, value: number): SetParamResult {
-  if (!isWhitelisted(param)) {
+  if (!isWhitelisted(param) && !isBrainSettable(param)) {
     throw new Error(`setParam: '${param}' is not a whitelisted parameter`)
   }
   const clamped = clampAction(param, value)
+  let appliedValue = clamped.value
+  let rateClamped = false
+  const rate = RATE_LIMITS[param]
+  if (rate !== undefined) {
+    const current: number = request.compound[param] ?? 1
+    const stepped = Math.min(current + rate, Math.max(current - rate, appliedValue))
+    rateClamped = stepped !== appliedValue
+    appliedValue = stepped
+  }
   return {
     request: {
       ...request,
-      compound: { ...request.compound, [param]: clamped.value },
+      compound: { ...request.compound, [param]: appliedValue },
     },
-    appliedValue: clamped.value,
-    clamped: clamped.clamped,
+    appliedValue,
+    clamped: clamped.clamped || rateClamped,
   }
 }
 
@@ -74,6 +87,11 @@ export class SwarmEngine {
 
   getRequest(): SimRequest {
     return this.sim.request
+  }
+
+  /** Live compound with all mid-run setParam swaps applied. */
+  getCompound(): CompoundParams {
+    return this.sim.compound
   }
 
   getResult(): SimResult {

@@ -6,11 +6,21 @@ export const WHITELISTED_PARAMS = ['kGSyn', 'kDetox', 'kMClear', 'kPhase2Vmax'] 
 export const WhitelistedParamSchema = z.enum(WHITELISTED_PARAMS)
 export type WhitelistedParam = z.infer<typeof WhitelistedParamSchema>
 
+/** Engine parameters the brain agent alone may set. */
+export const BRAIN_SETTABLE_PARAMS = ['kBrainEfflux'] as const
+
+/** Every parameter any organ agent may name in a reply action. */
+export const SETTABLE_PARAMS = [...WHITELISTED_PARAMS, ...BRAIN_SETTABLE_PARAMS] as const
+
+export const SettableParamSchema = z.enum(SETTABLE_PARAMS)
+export type SettableParam = z.infer<typeof SettableParamSchema>
+export type BrainSettableParam = (typeof BRAIN_SETTABLE_PARAMS)[number]
+
 export const DistressSchema = z.enum(['LOW', 'MODERATE', 'HIGH', 'CRITICAL'])
 export type Distress = z.infer<typeof DistressSchema>
 
 export const ActionSchema = z.object({
-  param: WhitelistedParamSchema,
+  param: SettableParamSchema,
   value: z.number().finite(),
 })
 export type AgentAction = z.infer<typeof ActionSchema>

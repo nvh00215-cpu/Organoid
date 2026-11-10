@@ -402,7 +402,7 @@ function stepOnce(state: SimState): void {
     sysMetabolite,
   )
   const heart = stepHeart(heartDamage, fold, compound.heartScale, DT)
-  const brain = stepBrain(brainConc, brainDamage, fold, compound.brainScale, DT)
+  const brain = stepBrain(brainConc, brainDamage, fold, compound.brainScale, DT, compound.kBrainEfflux ?? 1)
   heartDamage = heart.damage
   heartHerg = heart.herg
   brainConc = brain.conc

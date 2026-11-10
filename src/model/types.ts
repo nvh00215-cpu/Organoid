@@ -47,6 +47,13 @@ export interface CompoundParams {
   heartScale: number
   /** BloodÃ¢â‚¬â€œbrain barrier permeability gain. */
   brainScale: number
+  /**
+   * Blood-brain-barrier efflux gain. Multiplies the brain clearance loss rate;
+   * 1 is neutral and reproduces the original dynamics exactly. Optional for
+   * backward compatibility; absent means 1. Bounds and rate are illustrative
+   * and uncalibrated (see swarm LIMITS).
+   */
+  kBrainEfflux?: number
   blurb: string
 }
 

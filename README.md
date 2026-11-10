@@ -165,11 +165,12 @@ Each agent exists in two forms: a **mock** agent (deterministic, used in tests a
 ### Safety rails
 
 - **Zod validation both ways.** Vitals are summarized from engine output and validated before prompting; replies are validated before use.
-- **Clamp whitelist.** Only liver parameters can be changed, and every requested value is clamped. The transcript records both what the model *requested* and what was *applied*.
+- **Clamp whitelist.** Only liver parameters and the brain efflux gain can be changed, and every requested value is clamped. The transcript records both what the model *requested* and what was *applied*.
 - **Fallbacks.** An invalid, failed or timed-out reply falls back to a deterministic band-based classifier, so the run never stalls.
 - **Distress bands.** Each organ maps vitals to `Distress` levels through fixed bands; new informational vitals never affect those bands.
 - **Shared call budget.** A single budget caps total LLM calls and reserves capacity for the final checkpoint.
 - **No client text in prompts.** Prompts are built only from validated numeric and enum fields.
+- **Brain efflux action.** The opt-in brain agent may set only `kBrainEfflux` (blood-brain-barrier efflux gain, 1 is neutral), bounded to 0.5–2.0 and rate-limited to 0.1 per checkpoint so changes act slowly. Bounds and rate are illustrative and uncalibrated. Rejected params record nothing; the transcript keeps the pre-clamp `requested` value on brain entries.
 
 ### SwarmRunner and transcripts
 
@@ -177,7 +178,7 @@ Each agent exists in two forms: a **mock** agent (deterministic, used in tests a
 
 ### Narrative orchestrator
 
-At each checkpoint the orchestrator can produce one plain-English sentence describing the overall state. It receives only the engine's headline label, the time, and the three organ distress levels. The label is restricted to the exact set of strings the engine can produce, which is enforced by a schema and a drift-guard test. If the call fails or the budget is spent, a deterministic template sentence is used. The narrator cannot change the engine's label, and tests prove it.
+At each checkpoint the orchestrator can produce one plain-English sentence describing the overall state. It receives only the engine's headline label, the time, and the organ distress levels (liver, kidney and heart, plus brain when the opt-in brain agent is enabled). The label is restricted to the exact set of strings the engine can produce, which is enforced by a schema and a drift-guard test. If the call fails or the budget is spent, a deterministic template sentence is used. The narrator cannot change the engine's label, and tests prove it.
 
 ## Verdicts and headline labels
 
@@ -217,7 +218,7 @@ The simulation runs entirely in the browser. The LLM agents and narrator are opt
 
 Proxy behaviour:
 
-- Endpoints: `/api/organ` (discriminated union on liver, kidney, heart) and `/api/narrative`.
+- Endpoints: `/api/organ` (discriminated union on liver, kidney, heart and brain) and `/api/narrative`.
 - The key appears only in the upstream `Authorization` header and is never logged or returned.
 - Requests are size-capped and validated before anything is sent upstream; upstream calls time out after 25 s; output is capped.
 - Every error response is a short fixed message, with no upstream body or stack trace.
@@ -228,7 +229,7 @@ Before publishing a build, check that the key does not appear in `dist/assets/*.
 
 ## Testing and determinism
 
-The suite covers 13 files and 76 tests, all passing:
+The suite covers the model, swarm and proxy layers, all passing:
 
 - **Golden snapshots.** SHA-256 hashes of canonical results for fixed scenarios, including a coupled run, depth-index runs and metabolite-loop runs. Fixtures live in `src/swarm/__fixtures__/` and are **never regenerated**. New fixtures are created only for new behaviour, by a create-only writer (`WRITE_FIXTURES=1`).
 - **Resume identity.** 1-step, 50-step and all-at-once runs match; mid-run `setParam` applies only from the current tick; forks diverge cleanly and share history.

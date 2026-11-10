@@ -50,6 +50,7 @@ export const NarrativeContextSchema = z.object({
   liver: DistressSchema,
   kidney: DistressSchema,
   heart: DistressSchema,
+  brain: DistressSchema.optional(),
 })
 export type NarrativeContext = z.infer<typeof NarrativeContextSchema>
 
@@ -63,18 +64,23 @@ const DEFAULT_NARRATIVE_ENDPOINT = '/api/narrative'
 const DEFAULT_TIMEOUT_MS = 30000
 const MAX_NARRATIVE_CHARS = 280
 
+function distressList(c: NarrativeContext): string {
+  const base = `liver ${c.liver}, kidney ${c.kidney}, heart ${c.heart}`
+  return c.brain === undefined ? base : `${base}, brain ${c.brain}`
+}
+
 export function buildSystemPrompt(context: NarrativeContext): string {
   const c = NarrativeContextSchema.parse(context)
   return [
     'You are the narrator of a simulated patient. Write ONE plain-English sentence (at most 280 characters) describing the situation.',
-    `The overall status is "${c.label}" at hour ${c.tHours.toFixed(1)}. Organ distress: liver ${c.liver}, kidney ${c.kidney}, heart ${c.heart}.`,
+    `The overall status is "${c.label}" at hour ${c.tHours.toFixed(1)}. Organ distress: ${distressList(c)}.`,
     'Do not change the status label and do not invent measurements. Reply with the sentence only, no JSON.',
   ].join('\n')
 }
 
 export function templateNarrative(context: NarrativeContext): string {
   const c = NarrativeContextSchema.parse(context)
-  return `${c.label} at hour ${c.tHours.toFixed(1)}: liver ${c.liver}, kidney ${c.kidney}, heart ${c.heart}.`
+  return `${c.label} at hour ${c.tHours.toFixed(1)}: ${distressList(c)}.`
 }
 
 export async function narrateSystem(

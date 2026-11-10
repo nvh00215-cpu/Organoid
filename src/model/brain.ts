@@ -1,6 +1,6 @@
 /**
  * 0D brain compartment. brainConc tracks plasma fold through a slow barrier.
- * dB/dt = scale * kPerm * (fold - B) - kOut * B
+ * dB/dt = scale * kPerm * (fold - B) - efflux * kOut * B
  * Clearance back to plasma is zero. Parameters are illustrative, not fitted.
  */
 
@@ -30,9 +30,10 @@ export function stepBrain(
   fold: number,
   brainScale: number,
   dt: number,
+  efflux: number,
 ): BrainState {
   const perm = Math.max(0, brainScale) * K_PERM
-  const nextC = Math.max(0, conc + dt * (perm * (fold - conc) - K_OUT * conc))
+  const nextC = Math.max(0, conc + dt * (perm * (fold - conc) - K_OUT * efflux * conc))
   const excess = Math.max(0, nextC - NEURO_THRESHOLD)
   const drive = excess / (excess + 1.2)
   const nextD = clamp01(damage + dt * (K_NEURO * drive * (1 - damage) - K_RECOVER * damage))

@@ -1,6 +1,7 @@
 // One swarm run through the live dev proxy, saved for UI replay.
 // Live: node scripts/run-swarm.mjs  (requires `npm run dev` on port 5173)
 // Dry:  node scripts/run-swarm.mjs --dry  (stubbed agents, no network)
+// Brain: node scripts/run-swarm.mjs --brain (live recording with the brain agent on)
 // Writes { request, transcript, summary, usage } and nothing else: no keys,
 // no headers, no raw upstream bodies. Prints only counts, the verdict label,
 // the file size, and PASS/FAIL. Never prints keys or headers.
@@ -13,11 +14,13 @@ const HERE = dirname(fileURLToPath(import.meta.url))
 register('./swarm-resolve.hook.mjs', import.meta.url)
 
 const DRY = process.argv.includes('--dry')
+const BRAIN = process.argv.includes('--brain')
 
 const FALLBACK_MESSAGES = new Set([
   'Liver agent unreachable; holding current parameters.',
   'Kidney agent unreachable; holding current parameters.',
   'Heart agent unreachable; holding current parameters.',
+  ...(BRAIN ? ['Brain agent unreachable; holding current parameters.'] : []),
 ])
 
 function stubFetch() {
@@ -75,6 +78,7 @@ const runner = new swarm.SwarmRunner(request, {
   narrativeEndpoint: 'http://localhost:5173/api/narrative',
   budget: new swarm.CallBudget(),
   timeoutMs: 30000,
+  ...(BRAIN ? { includeBrain: true } : {}),
 })
 const run = await runner.run()
 const live = runner.getResult()
@@ -121,6 +125,7 @@ for (const entry of run.transcript) {
     liver: distressOf('liver'),
     kidney: distressOf('kidney'),
     heart: distressOf('heart'),
+    ...(sibs.some((s) => s.organ === 'brain') ? { brain: distressOf('brain') } : {}),
   }
   if (entry.narrative === swarm.templateNarrative(context)) fallbacks += 1
 }

@@ -1,4 +1,7 @@
 /** Shared per-run call budget with a protected reserve for the final round. */
+export const DEFAULT_MAX_CALLS = 120
+export const DEFAULT_RESERVE_CALLS = 8
+
 export class CallBudget {
   private calls = 0
   private approxTokens = 0
@@ -6,7 +9,7 @@ export class CallBudget {
   private readonly maxCalls: number
   private readonly reserveCalls: number
 
-  constructor(maxCalls = 120, reserveCalls = 8) {
+  constructor(maxCalls = DEFAULT_MAX_CALLS, reserveCalls = DEFAULT_RESERVE_CALLS) {
     this.maxCalls = maxCalls
     this.reserveCalls = reserveCalls
   }

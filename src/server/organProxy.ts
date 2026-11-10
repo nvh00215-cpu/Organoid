@@ -6,14 +6,15 @@ import type { Plugin } from 'vite'
 import { z } from 'zod'
 import { buildLiverPrompt } from '../swarm/LiverAgent.ts'
 import { NarrativeContextSchema, buildSystemPrompt } from '../swarm/orchestrator.ts'
-import { buildHeartPrompt, buildKidneyPrompt } from '../swarm/organPrompts.ts'
-import { HeartVitalsSchema, KidneyVitalsSchema } from '../swarm/organVitals.ts'
+import { buildBrainPrompt, buildHeartPrompt, buildKidneyPrompt } from '../swarm/organPrompts.ts'
+import { BrainVitalsSchema, HeartVitalsSchema, KidneyVitalsSchema } from '../swarm/organVitals.ts'
 import { SystemStateSchema } from '../swarm/types.ts'
 
-const OrganRequestSchema = z.discriminatedUnion('organ', [
+export const OrganRequestSchema = z.discriminatedUnion('organ', [
   z.object({ organ: z.literal('liver'), state: SystemStateSchema }),
   z.object({ organ: z.literal('kidney'), state: KidneyVitalsSchema }),
   z.object({ organ: z.literal('heart'), state: HeartVitalsSchema }),
+  z.object({ organ: z.literal('brain'), state: BrainVitalsSchema }),
 ])
 
 export interface OrganProxyOptions {
@@ -136,7 +137,10 @@ async function handleOrganRequest(
   } else if (request.data.organ === 'kidney') {
     prompt = buildKidneyPrompt(request.data.state)
   } else {
-    prompt = buildHeartPrompt(request.data.state)
+    prompt =
+      request.data.organ === 'brain'
+        ? buildBrainPrompt(request.data.state)
+        : buildHeartPrompt(request.data.state)
   }
   try {
     const text = await callModel(options, prompt)
